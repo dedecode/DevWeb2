@@ -1,0 +1,30 @@
+# Ambiente virtual
+.venv/
+__pycache__/
+*.pyc
+
+# Banco de dados SQLite
+*.sqlite3
+
+# Configurações do VSCode
+.vscode/
+
+# Arquivos temporários
+*.log
+*.pot
+*.pyc
+*.pyo
+*.swp
+*.DS_Store
+.env
+
+# Docker
+*.pid
+*.tar
+*.bak
+*.tmp
+*.old
+
+# Pastas do Django
+staticfiles/
+media/
