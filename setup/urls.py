@@ -18,7 +18,7 @@ class APIRootView(APIView):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', APIRootView.as_view(), name='api-root'),#visulização de endpoints
+    path('api/', APIRootView.as_view(), name='api-root'),#visulização de endpoints 
     path('api/tasks/', include('tasks.urls')),
     path('api/users/', include('users.urls')),
 ]
