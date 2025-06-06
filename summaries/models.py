@@ -33,12 +33,29 @@ class WeeklySummary(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
+        from datetime import date, timedelta
+
+        today = date.today()
+
+        # Valida se é segunda-feira
+        if today.weekday() != 0:
+            raise ValidationError("Só é permitido criar o resumo semanal na segunda-feira.")
+
+        # Define a semana passada
+        last_monday = today - timedelta(days=7 + today.weekday())
+        last_sunday = last_monday + timedelta(days=6)
+
+        # Evita duplicidade
         if WeeklySummary.objects.filter(
             user=self.user,
-            week_start=self.week_start,
-            week_end=self.week_end
+            week_start=last_monday,
+            week_end=last_sunday
         ).exclude(pk=self.pk).exists():
-            raise ValidationError("Você já criou um resumo semanal para esse período.")
+            raise ValidationError("Você já criou um resumo semanal para a semana passada.")
+
+        # Atualiza os campos
+        self.week_start = last_monday
+        self.week_end = last_sunday
 
     def save(self, *args, **kwargs):
         self.full_clean()
