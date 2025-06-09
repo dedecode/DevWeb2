@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    # Removido o ports para manter seguro e simples (porta estava aberta para outras aplcaçoes)
+
+
