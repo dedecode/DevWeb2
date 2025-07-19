@@ -19,7 +19,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- Segurança ---
 SECRET_KEY = os.getenv("SECRET_KEY", "sua-secret-key-insegura-dev")
 DEBUG = os.getenv("DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if not DEBUG else []
+
+# Se estiver em modo de desenvolvimento (DEBUG=True), permite o localhost.
+# Se estiver em produção (DEBUG=False), exige que a variável de ambiente seja definida.
+if DEBUG:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+else:
+    ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 # --- Aplicativos instalados ---
 INSTALLED_APPS = [
@@ -41,6 +47,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_spectacular',
     'channels',
+    # Adicionado para permitir comunicação com o frontend
+    #'corsheaders',
 ]
 
 # --- REST Framework ---
@@ -68,11 +76,20 @@ SIMPLE_JWT = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # Middleware do CORS adicionado (a ordem é importante)
+    #'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# --- Configuração do CORS ---
+# Permite que seu frontend (rodando em localhost:5173) se comunique com o backend.
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 # --- URLs e Templates ---
@@ -125,15 +142,12 @@ STATIC_URL = 'static/'
 # --- ID automático padrão ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- Channels / Pub-Sub com Redis ---
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")  # Use "redis" no Docker
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
+            # Conecta diretamente ao serviço 'redis' do Docker na porta padrão
+            "hosts": [("redis", 6379)],
         },
     },
 }

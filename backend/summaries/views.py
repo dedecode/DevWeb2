@@ -1,55 +1,26 @@
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets, permissions
 from .models import DailySummary, WeeklySummary
 from .serializers import DailySummarySerializer, WeeklySummarySerializer
-from core.utils.pubsub import publish_event
+# O import do redis_client foi removido para implementar a logica corretamente
 
 class DailySummaryViewSet(viewsets.ModelViewSet):
+    queryset = DailySummary.objects.all()
     serializer_class = DailySummarySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return DailySummary.objects.filter(user=self.request.user)
+        return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        instance = serializer.save(user=self.request.user)
-        publish_event("summary_channel", {
-            "type": "daily",
-            "id": instance.id,
-            "title": instance.title,
-            "created_by": self.request.user.username
-        })
-
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        publish_event("summary_channel", {
-            "type": "daily",
-            "id": instance.id,
-            "title": instance.title,
-            "edited_by": self.request.user.username
-        })
+        serializer.save(user=self.request.user)
 
 class WeeklySummaryViewSet(viewsets.ModelViewSet):
+    queryset = WeeklySummary.objects.all()
     serializer_class = WeeklySummarySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return WeeklySummary.objects.filter(user=self.request.user)
+        return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        instance = serializer.save(user=self.request.user)
-        publish_event("summary_channel", {
-            "type": "weekly",
-            "id": instance.id,
-            "title": instance.title,
-            "created_by": self.request.user.username
-        })
-
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        publish_event("summary_channel", {
-            "type": "weekly",
-            "id": instance.id,
-            "title": instance.title,
-            "edited_by": self.request.user.username
-        })
+        serializer.save(user=self.request.user)
