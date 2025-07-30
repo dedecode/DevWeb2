@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from datetime import date
+from datetime import date, timedelta
 from django.core.exceptions import ValidationError
 
 User = get_user_model()
@@ -12,12 +12,16 @@ class DailySummary(models.Model):
     date = models.DateField(default=date.today)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('user', 'date')  # 1 resumo por dia por usuário
+
     def clean(self):
-        if DailySummary.objects.filter(user=self.user, date=self.date).exclude(pk=self.pk).exists():
-            raise ValidationError("Você já criou um resumo diário para essa data.")
+        today = date.today()
+        if self.date != today:
+            raise ValidationError("Resumos diários só podem ser criados para o dia atual.")
 
     def save(self, *args, **kwargs):
-        self.full_clean()  #Chama clean() antes de salvar teste final
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -32,30 +36,16 @@ class WeeklySummary(models.Model):
     week_end = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('user', 'week_start', 'week_end') # 1 resumo semanal por semana logicamente
+
     def clean(self):
-        from datetime import date, timedelta
-
         today = date.today()
-
-        # Valida se é segunda-feira
-        if today.weekday() != 0:
-            raise ValidationError("Só é permitido criar o resumo semanal na segunda-feira.")
-
-        # Define a semana passada
-        last_monday = today - timedelta(days=7 + today.weekday())
-        last_sunday = last_monday + timedelta(days=6)
-
-        # Evita duplicidade
-        if WeeklySummary.objects.filter(
-            user=self.user,
-            week_start=last_monday,
-            week_end=last_sunday
-        ).exclude(pk=self.pk).exists():
-            raise ValidationError("Você já criou um resumo semanal para a semana passada.")
-
-        # Atualiza os campos
-        self.week_start = last_monday
-        self.week_end = last_sunday
+        days_since_monday = today.weekday() 
+        week_start = today - timedelta(days=days_since_monday)
+        week_end = week_start + timedelta(days=6)
+        self.week_start = week_start
+        self.week_end = week_end
 
     def save(self, *args, **kwargs):
         self.full_clean()

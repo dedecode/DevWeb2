@@ -1,30 +1,28 @@
 from rest_framework import serializers
 from .models import DailySummary, WeeklySummary
-from datetime import date, timedelta
+from datetime import date
 
 class DailySummarySerializer(serializers.ModelSerializer):
-
     class Meta:
         model = DailySummary
         fields = '__all__'
-        read_only_fields = ['user', 'created_at']
+        read_only_fields = ['user', 'created_at', 'date'] 
 
-    def validate_date(self, value):
+    def validate(self, attrs):
+        attrs['date'] = date.today()
+        return attrs
+
+    def create(self, validated_data):
         today = date.today()
-        monday_current_week = today - timedelta(days=today.weekday())
-        monday_last_week = monday_current_week - timedelta(days=7)
-        sunday_last_week = monday_last_week + timedelta(days=6)
-
-        if value > today:
-            raise serializers.ValidationError("Não é permitido criar ou editar resumos para datas futuras.")
-
-        if not (monday_last_week <= value <= today):
+        user = validated_data['user']
+        
+        if DailySummary.objects.filter(user=user, date=today).exists():
             raise serializers.ValidationError(
-                f"Você só pode criar/editar resumos diários para datas da semana atual ou passada "
-                f"({monday_last_week} até {today})."
+                "Você já criou um resumo para hoje."
             )
-
-        return value
+        
+        validated_data['date'] = today
+        return super().create(validated_data)
 
 
 class WeeklySummarySerializer(serializers.ModelSerializer):
@@ -33,33 +31,24 @@ class WeeklySummarySerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['user', 'created_at', 'week_start', 'week_end']
 
-    def validate(self, attrs):
+    def create(self, validated_data):
+        from datetime import timedelta
+        
         today = date.today()
-        # Segunda da semana atual
-        monday_current_week = today - timedelta(days=today.weekday())
-        # Segunda da semana passada
-        monday_last_week = monday_current_week - timedelta(days=7)
-        # Domingo da semana passada
-        sunday_last_week = monday_last_week + timedelta(days=6)
-        # Domingo da semana atual
-        sunday_current_week = monday_current_week + timedelta(days=6)
-
-        if self.instance is None:  # Criação
-            # Só pode criar resumo semanal para semana passada
-            week_start = attrs.get('week_start')
-            week_end = attrs.get('week_end')
-
-            if week_start != monday_last_week or week_end != sunday_last_week:
-                raise serializers.ValidationError(
-                    f"O resumo semanal deve ser referente à semana passada ({monday_last_week} a {sunday_last_week})."
-                )
-
-            # Só pode criar resumo semanal até domingo da semana atual (inclusive)
-            if today > sunday_current_week:
-                raise serializers.ValidationError(
-                    "O prazo para criar o resumo semanal da semana passada já expirou."
-                )
-
-        # Para edição (self.instance != None), permite editar sempre
-
-        return attrs
+        user = validated_data['user']
+        days_since_monday = today.weekday()
+        week_start = today - timedelta(days=days_since_monday)
+        week_end = week_start + timedelta(days=6)
+        
+        if WeeklySummary.objects.filter(
+            user=user, 
+            week_start=week_start, 
+            week_end=week_end
+        ).exists():
+            raise serializers.ValidationError(
+                "Você já criou um resumo para esta semana."
+            )
+        
+        validated_data['week_start'] = week_start
+        validated_data['week_end'] = week_end
+        return super().create(validated_data)

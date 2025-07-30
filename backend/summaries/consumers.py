@@ -10,7 +10,7 @@ class SummaryConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard("resumos", self.channel_name)
 
     async def receive(self, text_data):
-        pass  # você pode adicionar algo aqui depois, se quiser
+        pass  
 
     async def send_summary_update(self, event):
         await self.send(text_data=json.dumps(event["content"]))

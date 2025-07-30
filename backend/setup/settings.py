@@ -1,8 +1,5 @@
 """
 Django settings for setup project.
-
-Gerado com Django 5.2.1
-Documentação: https://docs.djangoproject.com/en/5.2/
 """
 
 from pathlib import Path
@@ -10,38 +7,43 @@ from datetime import timedelta
 import os
 from dotenv import load_dotenv
 
-# --- Variáveis de ambiente (.env) ---
 load_dotenv()
 
-# Caminho base do projeto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- Segurança ---
 SECRET_KEY = os.getenv("SECRET_KEY", "sua-secret-key-insegura-dev")
 DEBUG = os.getenv("DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if not DEBUG else []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if not DEBUG else ["*"]
 
 # --- Aplicativos instalados ---
 INSTALLED_APPS = [
-    # Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
     # Apps do projeto
     'users',
     'tasks',
     'summaries',
-
+    
     # Terceiros
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_spectacular',
-    'channels',
+    'corsheaders',
 ]
+
+# --- CORS (para desenvolvimento) ---
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  
+    "http://127.0.0.1:5173",
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 # --- REST Framework ---
 REST_FRAMEWORK = {
@@ -53,19 +55,23 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 # --- JWT (Simple JWT) ---
-ACCESS_TOKEN_LIFETIME_MINUTES = int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", 1440))  # 1 dia
+ACCESS_TOKEN_LIFETIME_MINUTES = int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", 1440))
 REFRESH_TOKEN_LIFETIME_DAYS = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", 7))
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=ACCESS_TOKEN_LIFETIME_MINUTES),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
+    'ROTATE_REFRESH_TOKENS': True,
 }
 
 # --- Middleware ---
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -75,7 +81,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# --- URLs e Templates ---
 ROOT_URLCONF = 'setup.urls'
 
 TEMPLATES = [
@@ -93,11 +98,9 @@ TEMPLATES = [
     },
 ]
 
-# --- WSGI e ASGI ---
 WSGI_APPLICATION = 'setup.wsgi.application'
-ASGI_APPLICATION = 'setup.asgi.application'
 
-# --- Banco de dados (SQLite por padrão) ---
+# --- Banco de dados ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -121,19 +124,13 @@ USE_TZ = True
 
 # --- Arquivos estáticos ---
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# --- ID automático padrão ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- Channels / Pub-Sub com Redis ---
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")  # Use "redis" no Docker
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
-        },
-    },
+# --- DRF Spectacular ---
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Tasks & Summaries API',
+    'DESCRIPTION': 'API para gerenciamento de tarefas e resumos',
+    'VERSION': '1.0.0',
 }
